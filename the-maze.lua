@@ -1,8 +1,7 @@
 --[[
-    Script: The Maze - Full Edition
+    Script: The Maze - Full Edition v2
     Executor: Delta
     Librería: Rayfield
-    Incluye: Visuales (Monstruos/Jugadores), TP con Drag, HACKS
 ]]
 
 -- 1. Cargar Rayfield
@@ -19,7 +18,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- 3. Ventana Principal
 local Window = Rayfield:CreateWindow({
-    Name = "The Maze | Full Edition",
+    Name = "The Maze | v2",
     LoadingTitle = "Cargando...",
     LoadingSubtitle = "by tu compa",
     ConfigurationSaving = { Enabled = true, FolderName = "TheMaze", FileName = "Config" },
@@ -27,7 +26,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- =========================================================
--- SISTEMA DE VISUALES (SOLO MONSTRUOS Y JUGADORES)
+-- VISUALES (Monstruos con color, Jugadores verde fijo)
 -- =========================================================
 local VisualTab = Window:CreateTab("Visuales 👿", 4483362458)
 
@@ -35,10 +34,11 @@ local ESP_Enabled = false
 local ESP_Monsters = false
 local ESP_Players = false
 
--- Colores según distancia
 local ColorSeguro = Color3.fromRGB(0, 255, 0)
 local ColorCerca = Color3.fromRGB(255, 255, 0)
 local ColorPeligro = Color3.fromRGB(255, 0, 0)
+local ColorJugador = Color3.fromRGB(0, 255, 0) -- Verde fijo para jugadores
+
 local DistanciaCerca = 50
 local DistanciaPeligro = 20
 
@@ -50,7 +50,6 @@ local function GetColorByDistance(dist)
     return ColorSeguro
 end
 
--- Función para crear/actualizar ESP (Jugador o Monstruo)
 local function UpdateESP(character, isMonster)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     local root = character.HumanoidRootPart
@@ -85,7 +84,6 @@ local function UpdateESP(character, isMonster)
     end
 end
 
--- Loop de actualización de ESP
 RunService.RenderStepped:Connect(function()
     if not ESP_Enabled then
         for _, data in pairs(ESPObjects) do
@@ -116,7 +114,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Renderizar todo
+    -- Renderizar
     for char, data in pairs(ESPObjects) do
         if not char or not char.Parent then
             data.Line:Remove()
@@ -134,7 +132,6 @@ RunService.RenderStepped:Connect(function()
         if not myRoot then continue end
         local dist = (root.Position - myRoot.Position).Magnitude
 
-        -- Filtrar según toggles
         local shouldShow = false
         if data.IsMonster and ESP_Monsters then shouldShow = true end
         if not data.IsMonster and ESP_Players then shouldShow = true end
@@ -155,29 +152,31 @@ RunService.RenderStepped:Connect(function()
             continue
         end
 
-        local color = GetColorByDistance(dist)
+        -- Color: Monstruos cambian por distancia, Jugadores verde fijo
+        local color
+        if data.IsMonster then
+            color = GetColorByDistance(dist)
+        else
+            color = ColorJugador
+        end
+
         local screenSize = Camera.ViewportSize
-        
-        -- Línea
         data.Line.From = Vector2.new(screenSize.X / 2, screenSize.Y)
         data.Line.To = Vector2.new(screenPos.X, screenPos.Y)
         data.Line.Color = color
         data.Line.Visible = true
 
-        -- Nombre con emoji
         local displayName = data.IsMonster and ("👿 " .. char.Name) or ("👤 " .. char.Name)
         data.NameText.Text = displayName
         data.NameText.Position = Vector2.new(screenPos.X, screenPos.Y - 30)
         data.NameText.Color = color
         data.NameText.Visible = true
 
-        -- Distancia
         data.DistText.Text = string.format("[%d m]", math.floor(dist))
         data.DistText.Position = Vector2.new(screenPos.X, screenPos.Y - 10)
         data.DistText.Color = color
         data.DistText.Visible = true
 
-        -- Chams
         if data.Highlight then
             data.Highlight.FillColor = color
             data.Highlight.OutlineColor = color
@@ -186,50 +185,15 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Toggles Visuales
-VisualTab:CreateToggle({
-    Name = "Activar Visuales",
-    CurrentValue = false,
-    Flag = "ESP_General",
-    Callback = function(v) ESP_Enabled = v end
-})
+VisualTab:CreateToggle({ Name = "Activar Visuales", CurrentValue = false, Flag = "ESP_General", Callback = function(v) ESP_Enabled = v end })
+VisualTab:CreateToggle({ Name = "👿 Monstruos (Color por distancia)", CurrentValue = false, Flag = "ESP_Monsters", Callback = function(v) ESP_Monsters = v end })
+VisualTab:CreateToggle({ Name = "👤 Jugadores (Verde fijo)", CurrentValue = false, Flag = "ESP_Players", Callback = function(v) ESP_Players = v end })
 
-VisualTab:CreateToggle({
-    Name = "👿 Monstruos (Línea + Chams + Distancia)",
-    CurrentValue = false,
-    Flag = "ESP_Monsters",
-    Callback = function(v) ESP_Monsters = v end
-})
-
-VisualTab:CreateToggle({
-    Name = "👤 Jugadores (Solo nombre + distancia)",
-    CurrentValue = false,
-    Flag = "ESP_Players",
-    Callback = function(v) ESP_Players = v end
-})
-
-VisualTab:CreateSlider({
-    Name = "Distancia Peligro (Rojo)",
-    Range = {5, 100},
-    Increment = 5,
-    Suffix = "m",
-    CurrentValue = 20,
-    Flag = "DistPeligro",
-    Callback = function(v) DistanciaPeligro = v end
-})
-
-VisualTab:CreateSlider({
-    Name = "Distancia Cerca (Amarillo)",
-    Range = {10, 200},
-    Increment = 5,
-    Suffix = "m",
-    CurrentValue = 50,
-    Flag = "DistCerca",
-    Callback = function(v) DistanciaCerca = v end
-})
+VisualTab:CreateSlider({ Name = "Distancia Peligro (Rojo)", Range = {5, 100}, Increment = 5, Suffix = "m", CurrentValue = 20, Flag = "DistPeligro", Callback = function(v) DistanciaPeligro = v end })
+VisualTab:CreateSlider({ Name = "Distancia Cerca (Amarillo)", Range = {10, 200}, Increment = 5, Suffix = "m", CurrentValue = 50, Flag = "DistCerca", Callback = function(v) DistanciaCerca = v end })
 
 -- =========================================================
--- SISTEMA DE TP CON DRAG
+-- SISTEMA DE TP CON BYPASS
 -- =========================================================
 local TPTab = Window:CreateTab("TP 📍", 4483362458)
 
@@ -290,33 +254,52 @@ local function ClearWaypoint(slot)
     UpdateFloatingButtons()
 end
 
-local function TeleportToWaypoint(slot)
+-- Bypass de Teleport (Resetea velocidad y usa Swim temporal)
+local function BypassTeleport(slot)
     if not Waypoints[slot] then
         Rayfield:Notify({Title = "TP " .. slot, Content = "No hay ubicación", Duration = 2})
         return
     end
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChild("Humanoid")
+    if hrp and humanoid then
+        -- Resetear velocidad para evitar detección
+        pcall(function()
+            hrp.Velocity = Vector3.zero
+            hrp.AssemblyLinearVelocity = Vector3.zero
+        end)
+        
+        -- Método Swim (evita que el anti-cheat te regrese)
+        humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+        task.wait(0.1)
+        
         hrp.CFrame = CFrame.new(Waypoints[slot] + Vector3.new(0, 3, 0))
-        Rayfield:Notify({Title = "TP " .. slot, Content = "Teletransportado", Duration = 2})
+        
+        task.delay(0.5, function()
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end)
+        
+        Rayfield:Notify({Title = "TP " .. slot, Content = "Teletransportado (Bypass)", Duration = 2})
     end
 end
 
--- UI de Rayfield para TP
 for i = 1, 5 do
     TPTab:CreateButton({ Name = "Marcar TP " .. i, Callback = function() SetWaypoint(i) end })
     TPTab:CreateButton({ Name = "Borrar TP " .. i, Callback = function() ClearWaypoint(i) end })
 end
 
 -- =========================================================
--- MENÚ FLOTANTE DE TP CON DRAG
+-- MENÚ FLOTANTE DE TP (Con Drag)
 -- =========================================================
 local FloatingGui = Instance.new("ScreenGui")
 FloatingGui.Name = "TP_FloatingMenu"
 FloatingGui.ResetOnSpawn = false
 FloatingGui.Parent = game.CoreGui
 
--- Botón flotante (arrastrable)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
@@ -331,7 +314,6 @@ local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(1, 0)
 ToggleCorner.Parent = ToggleBtn
 
--- Frame del menú (arrastrable)
 local FloatFrame = Instance.new("Frame")
 FloatFrame.Size = UDim2.new(0, 120, 0, 220)
 FloatFrame.Position = UDim2.new(0, 80, 0.5, -100)
@@ -379,7 +361,7 @@ function UpdateFloatingButtons()
                 btnCorner.CornerRadius = UDim.new(0, 6)
                 btnCorner.Parent = btn
                 
-                btn.MouseButton1Click:Connect(function() TeleportToWaypoint(i) end)
+                btn.MouseButton1Click:Connect(function() BypassTeleport(i) end)
                 FloatingButtons[i] = btn
             end
             FloatingButtons[i].Visible = true
@@ -392,7 +374,7 @@ function UpdateFloatingButtons()
     end
 end
 
--- Lógica de Drag para el Frame
+-- Drag para el Frame
 local draggingFrame = false
 local dragStartFrame = nil
 local startPosFrame = nil
@@ -418,7 +400,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Lógica de Drag para el Botón
+-- Drag para el Botón
 local draggingBtn = false
 local dragStartBtn = nil
 local startPosBtn = nil
@@ -444,7 +426,6 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Click del botón para abrir/cerrar
 ToggleBtn.MouseButton1Click:Connect(function()
     FloatFrame.Visible = not FloatFrame.Visible
     if FloatFrame.Visible then UpdateFloatingButtons() end
@@ -455,14 +436,26 @@ end)
 -- =========================================================
 local HacksTab = Window:CreateTab("HACKS 💀", 4483362458)
 
--- 1. Salto Infinito
-local infJumpEnabled = false
-HacksTab:CreateToggle({
-    Name = "Salto Infinito",
-    CurrentValue = false,
-    Flag = "InfJump",
-    Callback = function(v) infJumpEnabled = v end
+-- 1. Speed
+local speedValue = 16
+HacksTab:CreateSlider({
+    Name = "Velocidad (Speed)",
+    Range = {16, 100},
+    Increment = 1,
+    Suffix = "studs",
+    CurrentValue = 16,
+    Flag = "SpeedSlider",
+    Callback = function(v)
+        speedValue = v
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = v
+        end
+    end
 })
+
+-- 2. Salto Infinito
+local infJumpEnabled = false
+HacksTab:CreateToggle({ Name = "Salto Infinito", CurrentValue = false, Flag = "InfJump", Callback = function(v) infJumpEnabled = v end })
 
 UserInputService.JumpRequest:Connect(function()
     if infJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -470,14 +463,9 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- 2. Noclip
+-- 3. Noclip Mejorado
 local noclipEnabled = false
-HacksTab:CreateToggle({
-    Name = "Noclip (Atravesar paredes)",
-    CurrentValue = false,
-    Flag = "Noclip",
-    Callback = function(v) noclipEnabled = v end
-})
+HacksTab:CreateToggle({ Name = "Noclip (Atravesar paredes)", CurrentValue = false, Flag = "Noclip", Callback = function(v) noclipEnabled = v end })
 
 RunService.Stepped:Connect(function()
     if noclipEnabled and LocalPlayer.Character then
@@ -489,13 +477,14 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 3. ESP de Objetos (Menos piedras)
+-- 4. ESP de Objetos (Menos piedras)
 local ObjectESPEnabled = false
 local ObjectESPVisuals = {}
 
 local function IsIgnoredObject(name)
     local lower = name:lower()
-    return lower:find("rock") or lower:find("stone") or lower:find("piedra")
+    -- Ignora piedras, partes del cuerpo y partes genéricas
+    return lower:find("rock") or lower:find("stone") or lower:find("piedra") or lower == "part" or lower:find("arm") or lower:find("leg") or lower:find("torso")
 end
 
 local function CreateObjectESP(obj)
@@ -523,7 +512,7 @@ local function CreateObjectESP(obj)
 end
 
 HacksTab:CreateToggle({
-    Name = "ESP Objetos (Baterías, Llaves, etc.)",
+    Name = "ESP Objetos (Solo items útiles)",
     CurrentValue = false,
     Flag = "ObjectESP",
     Callback = function(v)
@@ -541,36 +530,27 @@ HacksTab:CreateToggle({
     end
 })
 
--- 4. Batería Infinita (Auto-recarga)
-local infiniteBattery = false
+-- 5. Llenar Inventario de Baterías
+local fillBatteriesEnabled = false
 HacksTab:CreateToggle({
-    Name = "Batería Infinita (Auto)",
+    Name = "Llenar Inventario de Baterías",
     CurrentValue = false,
-    Flag = "InfBattery",
-    Callback = function(v) infiniteBattery = v end
+    Flag = "FillBatteries",
+    Callback = function(v) fillBatteriesEnabled = v end
 })
 
 task.spawn(function()
     while true do
         task.wait(1)
-        if infiniteBattery then
+        if fillBatteriesEnabled then
             local char = LocalPlayer.Character
             if char then
-                local flashlight = char:FindFirstChild("Flashlight") or char:FindFirstChild("Linterna")
-                if flashlight then
-                    local battery = flashlight:FindFirstChild("Battery") or flashlight:FindFirstChild("Charge")
-                    if battery then
-                        pcall(function() battery.Value = 100 end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- Notificación final
-Rayfield:Notify({
-    Title = "The Maze",
-    Content = "Script completo cargado. Visuales, TP y Hacks listos.",
-    Duration = 4
-})
+                -- Busca baterías en el mapa y las mueve hacia el jugador
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj.Name:lower():find("battery") or obj.Name:lower():find("bateria") then
+                        if obj:IsA("BasePart") then
+                            -- Mueve la batería al inventario (simula recogida)
+                            if fireproximityprompt then
+                                for _, prompt in pairs(obj:GetDescendants()) do
+                                    if prompt:IsA("ProximityPrompt") then
+                                        fireproximityprompt(prompt)
